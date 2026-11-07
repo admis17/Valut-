@@ -88,6 +88,7 @@ export function AddEntryModal({ onClose }: { onClose: () => void }) {
   const [company, setCompany] = useState('');
   const [contact, setContact] = useState('');
   const [role, setRole] = useState('');
+  const [industry, setIndustry] = useState('');
   const [type, setType] = useState<Entry['type']>('card');
   const [notes, setNotes] = useState('');
   const [frontPrep, setFrontPrep] = useState<FilePrep>(null);
@@ -126,6 +127,7 @@ export function AddEntryModal({ onClose }: { onClose: () => void }) {
       companyName: company.trim(),
       contactName: contact.trim(),
       role: role.trim(),
+      industry: industry.trim(),
       type,
       cardFrontUrl: frontPrep?.dataUrl,
       cardBackUrl: backPrep?.dataUrl,
@@ -187,6 +189,16 @@ export function AddEntryModal({ onClose }: { onClose: () => void }) {
                 className={`mt-1 block ${inputClass}`}
               />
             </div>
+          </div>
+
+          <div>
+            <label className={labelClass}>Industry</label>
+            <input
+              value={industry}
+              onChange={(e) => setIndustry(e.target.value)}
+              placeholder="Consulting"
+              className={`mt-1 block ${inputClass}`}
+            />
           </div>
 
           <div>

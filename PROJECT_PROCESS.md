@@ -4,31 +4,26 @@
 BizVault — a premium React app storing scanned business cards & brochures with notes, searchable and filterable. Midnight black + molten gold aesthetic.
 
 ## Current Milestone
-MVP v0.2 — file slots model v1 (front/back/card-pdf/brochure), type-gated uploads
+v0.3 — Dashboard screen added (spec: BizVault-Dashboard-Prompt.md), tabs Overview/Vault/Tags
 
 ## Current Task
 None — awaiting user direction
 
 ## Current Status
-Built and committed; production build passes (tsc strict + Vite); dev server running on :5173
+Built and committed; production build passes; dev server running on :5173
 
 ## Completed
-- Repo connected to https://github.com/admis17/Valut-.git, test push OK
-- BizVault-Master-Doc.md committed (full PRD, tokens, structure, store)
-- Scaffolded Vite 5 + React 18 + TS strict + Tailwind 3.4 at repo root
-- Zustand store (persist 'bizvault-storage') exactly per doc
-- All screens built; npm run build passes
-- Fix: PDF/doc open via blob: URL (Chrome blocks data: URL navigation)
-- v0.2: Entry model v1 — cardFrontUrl/cardBackUrl/cardDocUrl/brochureFileUrl; persist migrate v0→v1
-- v0.2: Type-gated dropzones in modal (card→front/back/pdf, brochure→brochure, both→all); Remove/Replace/Open per slot; files persist immediately on pick; docs accept pdf/doc/docx/xls/xlsx/csv/txt/images
+- v0.0: Repo connected (test push), master doc committed
+- v0.1: Full MVP vault grid per master doc
+- v0.2: front/back/pdf slots, doc types, remove buttons, type-gated uploads, blob: PDF fix
+- v0.3: Dashboard (stat cards w/ live % + monthly count, Top industries bars w/ mount animation, TypeBreakdown dot-bars, ActivityFeed last 4, 3-col EntryGrid w/ local search+filter, detail panel below grid, empty-vault invite). Shared header now: icon + BizVault/{label} + Overview·Vault·Tags tabs + Add entry. New industry?: string field (modal input) powering industry bars. TagsTab lists industries w/ counts, click → Vault tab + store search. EntryDetailPanel extracted (shared: inline on Vault, below-grid on Dashboard). EntryCard gained thumbH/inlinePanel/clickToExpand props. SearchBar/FilterPills now controlled.
 
 ## In Progress
 - Nothing yet
 
 ## Next Steps
-- User: verify v0.2 flows in browser (upload front+back, remove, card pdf open, type gating)
-- Optional: swap localStorage → Supabase (doc step 12)
-- Optional: deploy
+- User: verify dashboard rendering + flows in browser
+- Optional: Supabase swap (doc step 12); industry editing in detail panel (currently only at creation)
 
 ## Architecture
 - React 18 + TS strict, Vite 5, Tailwind v3, Zustand persist (localStorage), Lucide, react-dropzone
