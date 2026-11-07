@@ -33,6 +33,18 @@ function IconButton({
 
 type SlotValue = string | null;
 
+// Chrome blocks top-frame navigation to `data:` URLs — pass through a blob: URL instead.
+async function openDataUrl(url: string) {
+  const blob = await fetch(url).then((r) => r.blob());
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = href;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(href), 60_000);
+}
+
 function FileSlotRow({
   kind,
   label,
@@ -91,7 +103,7 @@ function FileSlotRow({
               onClick={(e) => {
                 e.stopPropagation();
                 if (isImage) onOpen(url);
-                else window.open(url, '_blank');
+                else void openDataUrl(url);
               }}
               className="text-[11px] text-gold"
             >
