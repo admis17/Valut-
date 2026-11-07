@@ -10,6 +10,21 @@ const TYPE_STYLES: Record<Entry['type'], string> = {
   both: 'border-goldline bg-gold text-void',
 };
 
+const IMG_ACCEPT = 'image/jpeg,image/png,image/webp';
+const DOC_ACCEPT = 'application/pdf,image/jpeg,image/png,.doc,.docx,.csv,.xlsx,.xls,.txt';
+
+// Chrome blocks top-frame navigation to `data:` URLs — pass through a blob: URL instead.
+async function openDataUrl(url: string) {
+  const blob = await fetch(url).then((r) => r.blob());
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = href;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(href), 60_000);
+}
+
 function IconButton({
   label,
   onClick,
@@ -31,19 +46,12 @@ function IconButton({
   );
 }
 
-type SlotValue = string | null;
-
-// Chrome blocks top-frame navigation to `data:` URLs — pass through a blob: URL instead.
-async function openDataUrl(url: string) {
-  const blob = await fetch(url).then((r) => r.blob());
-  const href = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = href;
-  a.target = '_blank';
-  a.rel = 'noopener';
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(href), 60_000);
+function firstImage(...urls: Array<string | undefined>): string | null {
+  for (const u of urls) if (u && u.startsWith('data:image')) return u;
+  return null;
 }
+
+type SlotValue = string | null;
 
 function FileSlotRow({
   kind,
@@ -51,13 +59,15 @@ function FileSlotRow({
   url,
   accept,
   onPick,
+  onRemove,
   onOpen,
 }: {
-  kind: 'card' | 'brochure';
+  kind: 'image' | 'file';
   label: string;
   url: SlotValue;
   accept: string;
   onPick: (dataUrl: string) => void;
+  onRemove: () => void;
   onOpen: (url: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -66,7 +76,7 @@ function FileSlotRow({
   return (
     <div
       onClick={() => !url && inputRef.current?.click()}
-      className={`flex h-[68px] items-center gap-3 rounded-control border px-3 ${
+      className={`flex min-h-[68px] items-center gap-2 rounded-control border px-3 ${
         url ? 'border-goldline bg-goldDim' : 'cursor-pointer border-dashed border-line bg-void'
       }`}
     >
@@ -86,19 +96,21 @@ function FileSlotRow({
           e.target.value = '';
         }}
       />
-      {url && isImage ? (
-        <img src={url} className="h-11 w-11 rounded-control object-cover" />
-      ) : url ? (
-        <FileText size={16} className="text-gold" />
-      ) : kind === 'card' ? (
+      {url ? (
+        isImage ? (
+          <img src={url} className="h-11 w-11 shrink-0 rounded-control object-cover" />
+        ) : (
+          <FileText size={16} className="shrink-0 text-gold" />
+        )
+      ) : kind === 'image' ? (
         <ImageIcon size={16} className="text-textLow" />
       ) : (
         <FileText size={16} className="text-textLow" />
       )}
       {url ? (
         <>
-          <span className="text-[12px] text-textHi">{isImage ? `${label} attached` : `${label} (pdf) attached`}</span>
-          <span className="ml-auto flex items-center gap-3">
+          <span className="truncate text-[12px] text-textHi">{label}</span>
+          <span className="ml-auto flex shrink-0 items-center gap-2.5">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -118,10 +130,19 @@ function FileSlotRow({
             >
               Replace
             </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm(`Remove ${label.toLowerCase()}?`)) onRemove();
+              }}
+              className="text-[10px] uppercase tracking-[0.08em] text-textLow transition-colors duration-[180ms] hover:text-gold"
+            >
+              Remove
+            </button>
           </span>
         </>
       ) : (
-        <span className="text-[11px] text-textLow">No file yet</span>
+        <span className="truncate text-[11px] text-textLow">{label} — no file yet</span>
       )}
     </div>
   );
@@ -138,16 +159,9 @@ function ExpandedPanel({
   const deleteEntry = useVaultStore((s) => s.deleteEntry);
   const setSelected = useVaultStore((s) => s.setSelected);
   const [notes, setNotes] = useState(entry.notes);
-  const [cardUrl, setCardUrl] = useState<SlotValue>(entry.cardImageUrl ?? null);
-  const [brochureUrl, setBrochureUrl] = useState<SlotValue>(entry.brochureFileUrl ?? null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // resync drafts when the stored entry changes (save from anywhere)
-  useEffect(() => {
-    setNotes(entry.notes);
-    setCardUrl(entry.cardImageUrl ?? null);
-    setBrochureUrl(entry.brochureFileUrl ?? null);
-  }, [entry]);
+  useEffect(() => setNotes(entry.notes), [entry.id]);
 
   // auto-grow
   useEffect(() => {
@@ -157,6 +171,10 @@ function ExpandedPanel({
     el.style.height = `${el.scrollHeight}px`;
   }, [notes]);
 
+  // slot visibility follows the entry's type: card → front/back/pdf, brochure → brochure, both → all
+  const hasCardSlots = entry.type === 'card' || entry.type === 'both';
+  const hasBrochureSlot = entry.type === 'brochure' || entry.type === 'both';
+
   return (
     <div className="mt-3 rounded-card border-[0.5px] border-line bg-panel p-3.5">
       <div className="border-b border-line pb-2 text-[10px] uppercase tracking-[0.08em] text-gold">
@@ -164,22 +182,50 @@ function ExpandedPanel({
       </div>
 
       <div className="mt-2.5 space-y-2">
-        <FileSlotRow
-          kind="card"
-          label="Card scan"
-          accept="image/jpeg,image/png,image/webp"
-          url={cardUrl}
-          onPick={setCardUrl}
-          onOpen={onViewImage}
-        />
-        <FileSlotRow
-          kind="brochure"
-          label="Brochure"
-          accept="application/pdf,image/jpeg,image/png"
-          url={brochureUrl}
-          onPick={setBrochureUrl}
-          onOpen={onViewImage}
-        />
+        {hasCardSlots && (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <FileSlotRow
+                kind="image"
+                label="Front"
+                accept={IMG_ACCEPT}
+                url={entry.cardFrontUrl ?? null}
+                onPick={(u) => updateEntry(entry.id, { cardFrontUrl: u })}
+                onRemove={() => updateEntry(entry.id, { cardFrontUrl: undefined })}
+                onOpen={onViewImage}
+              />
+              <FileSlotRow
+                kind="image"
+                label="Back"
+                accept={IMG_ACCEPT}
+                url={entry.cardBackUrl ?? null}
+                onPick={(u) => updateEntry(entry.id, { cardBackUrl: u })}
+                onRemove={() => updateEntry(entry.id, { cardBackUrl: undefined })}
+                onOpen={onViewImage}
+              />
+            </div>
+            <FileSlotRow
+              kind="file"
+              label="Card PDF"
+              accept={DOC_ACCEPT}
+              url={entry.cardDocUrl ?? null}
+              onPick={(u) => updateEntry(entry.id, { cardDocUrl: u })}
+              onRemove={() => updateEntry(entry.id, { cardDocUrl: undefined })}
+              onOpen={onViewImage}
+            />
+          </>
+        )}
+        {hasBrochureSlot && (
+          <FileSlotRow
+            kind="file"
+            label="Brochure"
+            accept={DOC_ACCEPT}
+            url={entry.brochureFileUrl ?? null}
+            onPick={(u) => updateEntry(entry.id, { brochureFileUrl: u })}
+            onRemove={() => updateEntry(entry.id, { brochureFileUrl: undefined })}
+            onOpen={onViewImage}
+          />
+        )}
       </div>
 
       <label className="mt-2.5 block text-[10px] uppercase tracking-[0.08em] text-textLow">
@@ -195,13 +241,7 @@ function ExpandedPanel({
 
       <div className="mt-3 flex items-center gap-3">
         <button
-          onClick={() =>
-            updateEntry(entry.id, {
-              notes,
-              cardImageUrl: cardUrl ?? undefined,
-              brochureFileUrl: brochureUrl ?? undefined,
-            })
-          }
+          onClick={() => updateEntry(entry.id, { notes })}
           className="rounded-control bg-gold px-3.5 py-1.5 text-[12px] font-medium text-void transition-colors duration-[180ms] hover:bg-gold/90"
         >
           Save
@@ -233,11 +273,7 @@ export function EntryCard({
   const setSelected = useVaultStore((s) => s.setSelected);
   const deleteEntry = useVaultStore((s) => s.deleteEntry);
   const open = selectedId === entry.id;
-  const thumb =
-    entry.cardImageUrl ??
-    (entry.brochureFileUrl && entry.brochureFileUrl.startsWith('data:image')
-      ? entry.brochureFileUrl
-      : null);
+  const thumb = firstImage(entry.cardFrontUrl, entry.cardBackUrl, entry.brochureFileUrl);
   const contact = [entry.contactName, entry.role].filter(Boolean).join(' · ');
 
   return (

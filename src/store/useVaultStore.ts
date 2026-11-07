@@ -39,6 +39,19 @@ export const useVaultStore = create<VaultStore>()(
       deleteEntry: (id) =>
         set((s) => ({ entries: s.entries.filter((e) => e.id !== id) })),
     }),
-    { name: 'bizvault-storage' }
+    { name: 'bizvault-storage', version: 1,
+      // v0 kept the card scan in cardImageUrl; v1 splits it into front/back/doc slots
+      migrate: (state, version) => {
+        if (version >= 1 || !state || typeof state !== 'object') return state as VaultStore;
+        const s = state as { entries?: Record<string, unknown>[] };
+        return {
+          ...s,
+          entries: s.entries?.map(({ cardImageUrl, ...rest }) => ({
+            ...rest,
+            cardFrontUrl: cardImageUrl,
+          })),
+        } as unknown as VaultStore;
+      },
+    }
   )
 );

@@ -6,8 +6,18 @@ import type { Entry } from '../types/entry';
 
 type FilePrep = { dataUrl: string; name: string } | null;
 
-const CARD_ACCEPT = { 'image/jpeg': [], 'image/png': [], 'image/webp': [] };
-const BROCHURE_ACCEPT = { 'application/pdf': [], 'image/jpeg': [], 'image/png': [] };
+const IMG_ACCEPT = { 'image/jpeg': [], 'image/png': [], 'image/webp': [] };
+const DOC_ACCEPT = {
+  'application/pdf': ['.pdf'],
+  'image/jpeg': ['.jpg', '.jpeg'],
+  'image/png': ['.png'],
+  'text/csv': ['.csv'],
+  'text/plain': ['.txt'],
+  'application/msword': ['.doc'],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+  'application/vnd.ms-excel': ['.xls'],
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+};
 
 const inputClass =
   'w-full rounded-control border-[0.5px] border-line bg-void px-3 py-2 text-[13px] text-textHi placeholder:text-textLow focus:border-goldline focus:outline-none focus:ring-2 focus:ring-goldFocus';
@@ -24,11 +34,13 @@ function readFile(file: File): Promise<{ dataUrl: string; name: string }> {
 
 function DropZone({
   title,
+  kind,
   accept,
   file,
   onFile,
 }: {
   title: string;
+  kind: 'image' | 'file';
   accept: Record<string, string[]>;
   file: FilePrep;
   onFile: (f: FilePrep) => void;
@@ -58,12 +70,14 @@ function DropZone({
         file.dataUrl.startsWith('data:image') ? (
           <img src={file.dataUrl} className="h-full w-full rounded-control object-cover" />
         ) : (
-          <span className="flex items-center gap-2 px-2 text-[12px] text-gold">
+          <span className="flex items-center gap-2 px-2 text-center text-[11px] text-gold">
             <FileText size={14} /> {file.name}
           </span>
         )
       ) : (
-        <span className="px-2 text-center text-[12px] text-textMid">Drop {title} here or click</span>
+        <span className="px-2 text-center text-[12px] text-textMid">
+          {kind === 'image' ? `Drop ${title} here or click` : `${title} — drop or click`}
+        </span>
       )}
     </div>
   );
@@ -76,7 +90,9 @@ export function AddEntryModal({ onClose }: { onClose: () => void }) {
   const [role, setRole] = useState('');
   const [type, setType] = useState<Entry['type']>('card');
   const [notes, setNotes] = useState('');
-  const [cardPrep, setCardPrep] = useState<FilePrep>(null);
+  const [frontPrep, setFrontPrep] = useState<FilePrep>(null);
+  const [backPrep, setBackPrep] = useState<FilePrep>(null);
+  const [docPrep, setDocPrep] = useState<FilePrep>(null);
   const [brochurePrep, setBrochurePrep] = useState<FilePrep>(null);
   const [missingCompany, setMissingCompany] = useState(false);
 
@@ -87,6 +103,17 @@ export function AddEntryModal({ onClose }: { onClose: () => void }) {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
+
+  // uploads follow the type: card → front/back/pdf, brochure → brochure, both → everything
+  const switchType = (t: Entry['type']) => {
+    setType(t);
+    if (t === 'card') setBrochurePrep(null);
+    if (t === 'brochure') {
+      setFrontPrep(null);
+      setBackPrep(null);
+      setDocPrep(null);
+    }
+  };
 
   const save = () => {
     if (!company.trim()) {
@@ -100,7 +127,9 @@ export function AddEntryModal({ onClose }: { onClose: () => void }) {
       contactName: contact.trim(),
       role: role.trim(),
       type,
-      cardImageUrl: cardPrep?.dataUrl,
+      cardFrontUrl: frontPrep?.dataUrl,
+      cardBackUrl: backPrep?.dataUrl,
+      cardDocUrl: docPrep?.dataUrl,
       brochureFileUrl: brochurePrep?.dataUrl,
       notes: notes.trim(),
       createdAt: now,
@@ -167,7 +196,7 @@ export function AddEntryModal({ onClose }: { onClose: () => void }) {
                 <button
                   key={t}
                   type="button"
-                  onClick={() => setType(t)}
+                  onClick={() => switchType(t)}
                   className={`flex-1 rounded-[6px] py-1.5 text-[12px] transition-colors duration-[180ms] ${
                     type === t ? 'bg-gold text-void' : 'text-textMid hover:text-textHi'
                   }`}
@@ -178,10 +207,18 @@ export function AddEntryModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <DropZone title="card scan" accept={CARD_ACCEPT} file={cardPrep} onFile={setCardPrep} />
-            <DropZone title="brochure" accept={BROCHURE_ACCEPT} file={brochurePrep} onFile={setBrochurePrep} />
-          </div>
+          {(type === 'card' || type === 'both') && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <DropZone title="front scan" kind="image" accept={IMG_ACCEPT} file={frontPrep} onFile={setFrontPrep} />
+                <DropZone title="back scan" kind="image" accept={IMG_ACCEPT} file={backPrep} onFile={setBackPrep} />
+              </div>
+              <DropZone title="Card document (pdf/word/excel/…)" kind="file" accept={DOC_ACCEPT} file={docPrep} onFile={setDocPrep} />
+            </>
+          )}
+          {(type === 'brochure' || type === 'both') && (
+            <DropZone title="Brochure (pdf/image/doc)" kind="file" accept={DOC_ACCEPT} file={brochurePrep} onFile={setBrochurePrep} />
+          )}
 
           <div>
             <label className={labelClass}>Notes</label>

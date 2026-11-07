@@ -4,7 +4,9 @@ export type Entry = {
   contactName: string;
   role: string;
   type: 'card' | 'brochure' | 'both';
-  cardImageUrl?: string; // base64 (MVP) or Supabase Storage URL
+  cardFrontUrl?: string; // front scan (image)
+  cardBackUrl?: string; // back scan (image)
+  cardDocUrl?: string; // attached document for the card (pdf/docx/xlsx/csv…)
   brochureFileUrl?: string;
   notes: string;
   createdAt: string; // ISO date string
