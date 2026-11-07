@@ -4,51 +4,53 @@
 BizVault — a premium React app storing scanned business cards & brochures with notes, searchable and filterable. Midnight black + molten gold aesthetic.
 
 ## Current Milestone
-MVP bootstrap (per "MVP Build Order" in BizVault-Master-Doc.md)
+MVP complete (v0.1.0) — all 11 build steps from BizVault-Master-Doc.md implemented
 
 ## Current Task
-Setup: scaffold Vite project and begin build order step 1
+None — awaiting user direction (Supabase swap is doc step 12, optional)
 
 ## Current Status
-Spec committed; no code written yet
+Built and committed; production build passes (tsc strict + Vite)
 
 ## Completed
 - Repo connected to https://github.com/admis17/Valut-.git, test push OK
 - BizVault-Master-Doc.md committed (full PRD, tokens, structure, store)
+- Scaffolded Vite 5 + React 18 + TS strict + Tailwind 3.4 at repo root
+- Zustand store (persist 'bizvault-storage') exactly per doc
+- VaultHeader, SearchBar, FilterPills, EntryCard (collapsed + expanded panel, file slots, save/delete), AddEntryModal (react-dropzone, base64), ImageViewer, empty state
+- useFilteredEntries hook per doc
+- npm install OK; npm run build passes
 
 ## In Progress
 - Nothing yet
 
 ## Next Steps
-1. `npm create vite@latest bizvault -- --template react-ts`
-2. Tailwind v3 + tokens in tailwind.config.ts
-3. Inter font, bg #080808
-4. useVaultStore (Zustand persist)
-5. VaultHeader / SearchBar / FilterPills
-6-7. EntryCard + expanded panel
-8. AddEntryModal with react-dropzone
-9. useFilteredEntries wiring
-10. ImageViewer
-11. Empty state, mobile, keyboard nav
+- User: run `npm run dev` to verify visually in a browser
+- Optional: swap localStorage → Supabase (doc step 12)
+- Optional: deploy
 
 ## Architecture
-- React 18 + TS strict, Vite 5, Tailwind v3, Zustand (localStorage persist), Lucide, react-dropzone
-- Storage: localStorage MVP → Supabase later (schema in doc)
-- Key files planned per doc's Project Structure section
+- React 18 + TS strict, Vite 5, Tailwind v3, Zustand persist (localStorage), Lucide, react-dropzone
+- No router (single screen — doc marks routing optional), no Supabase client yet (unused until step 12)
+- All styling via Tailwind tokens in tailwind.config.ts; src/lib/tokens.ts holds canonical token source
 
 ## Important Decisions
-- Identity (repo-local): admis17 <admis17@users.noreply.github.com>
+- Identity (repo-local git): admis17 <admis17@users.noreply.github.com>
 - Gold #FFB800 is the ONLY accent color; flat design, no shadows/blur/gradients
+- Files stored as base64 data URLs; pdf opens via window.open, images via ImageViewer
+- ExpandedPanel drafts are local state, resynced from store on save/entry change
 
 ## Known Issues
-- None yet
+- npm audit: 1 moderate + 1 high (dev-tool transitive deps); not fixed — nothing user-facing. Look before adding prod traffic.
+- base64 in localStorage caps ~4-5MB of scans; doc itself flags this (upgrade path = Supabase)
 
 ## Failed Approaches
 - None yet
 
 ## Environment / Commands
 - Repo: C:\Users\Adarsh\AppData\Local\Temp\opencode\Valut-
-- Build: npm run build ; Lint: npm run lint ; Typecheck: default tsc after scaffold
+- Dev: `npm.cmd run dev` (npm.ps1 blocked by PowerShell policy — use npm.cmd)
+- Build: `npm.cmd run build` (passes)
 
 ## User Requirements
 - Two-column grid, real-time search, filter pills, inline notes edit, delete confirm, persistence
